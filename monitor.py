@@ -1,4 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
+
+from __future__ import print_function
 
 # based on code by henryk ploetz
 # https://hackaday.io/project/5301-reverse-engineering-a-low-cost-usb-co-monitor/log/17909-all-your-base-are-belong-to-us
@@ -6,14 +8,13 @@
 import fcntl
 import os
 import requests
-import socket
 import sys
 import time
 import yaml
 
 
-def decrypt(key, data):
-    cstate = [0x48, 0x74, 0x65,  0x6D,  0x70,  0x39,  0x39,  0x65]
+def decrypt(DEVICE_KEY, data):
+    cstate = [0x48, 0x74, 0x65, 0x6D, 0x70, 0x39, 0x39, 0x65]
     shuffle = [2, 4, 0, 7, 1, 6, 5, 3]
 
     phase1 = [0] * 8
@@ -22,7 +23,7 @@ def decrypt(key, data):
 
     phase2 = [0] * 8
     for i in range(8):
-        phase2[i] = phase1[i] ^ key[i]
+        phase2[i] = phase1[i] ^ DEVICE_KEY[i]
 
     phase3 = [0] * 8
     for i in range(8):
@@ -46,19 +47,49 @@ def hd(d):
 def now():
     return int(time.time())
 
+slack_co2_notified = False
+slack_temperature_notified = False
 
-def notifySlack(co2, config, upper_threshold):
-    if ((not config) or (not "webhook" in config)):
+def notifySlack(co2_level, temperature, config):
+    global slack_co2_notified, slack_temperature_notified
+    upper_co2_threshold = config["slack"]["upper_co2_threshold"]
+    lower_co2_threshold = config["slack"]["lower_co2_threshold"]
+
+    upper_temperature_threshold = config["slack"]["upper_temperature_threshold"]
+    lower_temperatue_threshold = config["slack"]["lower_temperatue_threshold"]
+
+    if (co2_level > upper_co2_threshold) and (not slack_co2_notified):
+        slack_co2_notified = True
+        co2_message = "Bitte Fenster oeffnen, der CO2 Level ist bei {0}ppm.".format(co2_level)
+    elif (co2_level < lower_co2_threshold):
+        if (slack_co2_notified):
+            co2_message = "Das Fenster kann geschlossen werden, der CO2 Level ist nur noch bei {0}ppm.".format(co2_level)
+            slack_co2_notified = False
+    else:
+        co2_message = None
+
+    send_slack_message(config, co2_message)
+
+    if (temperature > upper_temperature_threshold) and (not slack_temperature_notified):
+        slack_temperature_notified = True
+        temperature_message = "Heiss hier drinnen, es sind {0} Grad Celsius. Klimaanlage anschalten!".format(temperature)
+    elif (temperature < lower_temperatue_threshold):
+        if (slack_temperature_notified):
+            temperature_message = "Es ist wieder kuehler, nur noch {0} Grad Celsius. Die Klimaanlage kann wieder ausgeschaltet werden.'".format(temperature)
+            slack_temperature_notified = False
+    else:
+        temperature_message = None
+
+    send_slack_message(config, temperature_message)
+
+def send_slack_message(config, message):
+    if ((not message) or (not config) or ("webhook" not in config)):
         return
-    webhookUrl = config["webhook"]
+    webhook_url = config["webhook"]
     channel = config["channel"] if "channel" in config else "#general"
     botName = config["botname"] if "botname" in config else "CO2bot"
     icon = config["icon"] if "icon" in config else ":robot_face:"
 
-    if (co2 > upper_threshold):
-        message = "Dude, you should open a window. We have *%dppm* in here." % co2
-    else:
-        message = "Ok, you can close the window now. We're down to *%dppm*." % co2
     try:
         payload = {
             'channel': channel,
@@ -66,9 +97,9 @@ def notifySlack(co2, config, upper_threshold):
             'text': message,
             'icon_emoji': icon
         }
-        requests.post(webhookUrl, json=payload)
+        requests.post(webhook_url, json=payload)
     except:
-        print "Unexpected error:", sys.exc_info()[0]
+        print("Unexpected error:", sys.exc_info()[0])
 
 
 def config(config_file=None):
@@ -82,28 +113,36 @@ def config(config_file=None):
     with open(config_file, 'r') as stream:
         return yaml.load(stream)
 
+DEVICE_KEY = [0xc4, 0xc6, 0xc0, 0x92, 0x40, 0x23, 0xdc, 0x96]
 
-if __name__ == "__main__":
-    """main"""
-
-    # use lock on socket to indicate that script is already running
-    try:
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        # Create an abstract socket, by prefixing it with null.
-        s.bind('\0postconnect_gateway_notify_lock')
-    except socket.error, e:
-        # if script is already running just exit silently
-        sys.exit(0)
-
-    key = [0xc4, 0xc6, 0xc0, 0x92, 0x40, 0x23, 0xdc, 0x96]
-    co2_monitor_device_handle = open(sys.argv[1], "a+b",  0)
+def open_monitor_device():
+    co2_monitor_device_handle = open(sys.argv[1], "a+b", 0)
     HIDIOCSFEATURE_9 = 0xC0094806
-    set_report = "\x00" + "".join(chr(e) for e in key)
+    set_report = "\x00" + "".join(chr(e) for e in DEVICE_KEY)
     fcntl.ioctl(co2_monitor_device_handle, HIDIOCSFEATURE_9, set_report)
 
+    return co2_monitor_device_handle
+
+def read_device_data(co2_monitor_device_handle):
+    data = list(ord(chunk) for chunk in co2_monitor_device_handle.read(8))
+    decrypted = decrypt(DEVICE_KEY, data)
     values = {}
-    stamp = now()
-    notified = False
+    if decrypted[4] != 0x0d or (sum(decrypted[:3]) & 0xff) != decrypted[3]:
+        print(hd(data), " => ", hd(decrypted), "Checksum error")
+    else:
+        op = decrypted[0]
+        val = decrypted[1] << 8 | decrypted[2]
+        values[op] = val
+
+        if (0x50 in values) and (0x42 in values):
+            co2_level = values[0x50]
+            temperature = (values[0x42] / 16.0 - 273.15)
+            return (co2_level, temperature)
+
+    return (None, None)
+
+
+if __name__ == "__main__":
 
     try:
         config = config(config_file=sys.argv[2])
@@ -112,43 +151,21 @@ if __name__ == "__main__":
 
     # client = client(config)
 
+    co2_monitor_device_handle = open_monitor_device()
+    stamp = now()
+
     while True:
-        data = list(ord(e) for e in co2_monitor_device_handle.read(8))
-        decrypted = decrypt(key, data)
-        if decrypted[4] != 0x0d or (sum(decrypted[:3]) & 0xff) != decrypted[3]:
-            print hd(data), " => ", hd(decrypted),  "Checksum error"
-        else:
-            op = decrypted[0]
-            val = decrypted[1] << 8 | decrypted[2]
-            values[op] = val
+        (co2_level, temperature) = read_device_data(co2_monitor_device_handle)
 
-            if (0x50 in values) and (0x42 in values):
-                co2 = values[0x50]
-                tmp = (values[0x42] / 16.0 - 273.15)
+        if co2_level and temperature:
+            # check if it's a sensible value
+            # (i.e. within the measuring range plus some margin)
+            if (co2_level > 5000 or co2_level < 0):
+                continue
 
-                # check if it's a sensible value
-                # (i.e. within the measuring range plus some margin)
-                if (co2 > 5000 or co2 < 0):
-                    continue
-
-                print "CO2: %4i TMP: %3.1f" % (co2, tmp)
-                if now() - stamp > 5:
-                    print ">>>"
-                    # publish(client, config["prefix"], co2, tmp)
-
-                    # publish to slack, if configured
-                    if ("slack" in config):
-                        upper_threshold = config["slack"][
-                            "upper_threshold"] if "upper_threshold" in config["slack"] else 800
-                        lower_threshold = config["slack"][
-                            "lower_threshold"] if "lower_threshold" in config["slack"] else 600
-                        if (co2 > upper_threshold) and (not notified):
-                            notified = True
-                            notifySlack(co2, config["slack"], upper_threshold)
-                        elif (co2 < lower_threshold):
-                            if (notified):
-                                notifySlack(
-                                    co2, config["slack"], upper_threshold)
-                            notified = False
-
-                    stamp = now()
+            print("CO2: %4i TMP: %3.1f" % (co2_level, temperature))
+            if now() - stamp > 5:
+                print(">>>")
+                if ("slack" in config):
+                    notifySlack(temperature, co2_level, config)
+                stamp = now()
