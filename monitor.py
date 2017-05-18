@@ -50,14 +50,15 @@ def now():
 slack_co2_notified = False
 slack_temperature_notified = False
 
-def notifySlack(co2_level, temperature, config):
+def notify_slack(temperature, co2_level, config):
     global slack_co2_notified, slack_temperature_notified
-    upper_co2_threshold = config["slack"]["upper_co2_threshold"]
-    lower_co2_threshold = config["slack"]["lower_co2_threshold"]
+    upper_co2_threshold = config["upper_co2_threshold"]
+    lower_co2_threshold = config["lower_co2_threshold"]
 
-    upper_temperature_threshold = config["slack"]["upper_temperature_threshold"]
-    lower_temperatue_threshold = config["slack"]["lower_temperatue_threshold"]
+    upper_temperature_threshold = config["upper_temperature_threshold"]
+    lower_temperature_threshold = config["lower_temperature_threshold"]
 
+    co2_message = None
     if (co2_level > upper_co2_threshold) and (not slack_co2_notified):
         slack_co2_notified = True
         co2_message = "Bitte Fenster oeffnen, der CO2 Level ist bei {0}ppm.".format(co2_level)
@@ -65,41 +66,38 @@ def notifySlack(co2_level, temperature, config):
         if (slack_co2_notified):
             co2_message = "Das Fenster kann geschlossen werden, der CO2 Level ist nur noch bei {0}ppm.".format(co2_level)
             slack_co2_notified = False
-    else:
-        co2_message = None
 
     send_slack_message(config, co2_message)
 
+    temperature_message = None
     if (temperature > upper_temperature_threshold) and (not slack_temperature_notified):
         slack_temperature_notified = True
         temperature_message = "Heiss hier drinnen, es sind {0} Grad Celsius. Klimaanlage anschalten!".format(temperature)
-    elif (temperature < lower_temperatue_threshold):
+    elif (temperature < lower_temperature_threshold):
         if (slack_temperature_notified):
             temperature_message = "Es ist wieder kuehler, nur noch {0} Grad Celsius. Die Klimaanlage kann wieder ausgeschaltet werden.'".format(temperature)
             slack_temperature_notified = False
-    else:
-        temperature_message = None
 
+    # print("debug temp {0}, notification {1}".format(temperature_message, slack_temperature_notified))
     send_slack_message(config, temperature_message)
 
 def send_slack_message(config, message):
-    if ((not message) or (not config) or ("webhook" not in config)):
-        return
-    webhook_url = config["webhook"]
-    channel = config["channel"] if "channel" in config else "#general"
-    botName = config["botname"] if "botname" in config else "CO2bot"
-    icon = config["icon"] if "icon" in config else ":robot_face:"
-
-    try:
-        payload = {
-            'channel': channel,
-            'username': botName,
-            'text': message,
-            'icon_emoji': icon
-        }
-        requests.post(webhook_url, json=payload)
-    except:
-        print("Unexpected error:", sys.exc_info()[0])
+    if (message and config and "webhook" in config):
+        webhook_url = config["webhook"]
+        channel = config["channel"] if "channel" in config else "#general"
+        botName = config["botname"] if "botname" in config else "CO2bot"
+        icon = config["icon"] if "icon" in config else ":robot_face:"
+        # print("debug sending message to slack: {0}".format(message))
+        try:
+            payload = {
+                'channel': channel,
+                'username': botName,
+                'text': message,
+                'icon_emoji': icon
+            }
+            requests.post(webhook_url, json=payload)
+        except:
+            print("Unexpected error:", sys.exc_info()[0])
 
 
 def config(config_file=None):
@@ -124,9 +122,10 @@ def open_monitor_device():
     return co2_monitor_device_handle
 
 def read_device_data(co2_monitor_device_handle):
+    global values
     data = list(ord(chunk) for chunk in co2_monitor_device_handle.read(8))
     decrypted = decrypt(DEVICE_KEY, data)
-    values = {}
+
     if decrypted[4] != 0x0d or (sum(decrypted[:3]) & 0xff) != decrypted[3]:
         print(hd(data), " => ", hd(decrypted), "Checksum error")
     else:
@@ -153,6 +152,7 @@ if __name__ == "__main__":
 
     co2_monitor_device_handle = open_monitor_device()
     stamp = now()
+    values = {}
 
     while True:
         (co2_level, temperature) = read_device_data(co2_monitor_device_handle)
@@ -167,5 +167,5 @@ if __name__ == "__main__":
             if now() - stamp > 5:
                 print(">>>")
                 if ("slack" in config):
-                    notifySlack(temperature, co2_level, config)
+                    notify_slack(temperature, co2_level, config["slack"])
                 stamp = now()
