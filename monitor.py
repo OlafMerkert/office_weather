@@ -164,12 +164,15 @@ def main(device_path, config_file_path):
 
     if "slack" in config:
         slack = SlackReporter(config["slack"])
+        print("debug Enabled sending slack messages")
         if "temperature" in config:
             temperature_observer = HystereseNotifierFromConfig(slack, lambda data: data.temperature, config["temperature"])
             observers.append(temperature_observer)
+            print("debug Enabled watching temperature")
         if "co2_level" in config:
             co2_observer = HystereseNotifierFromConfig(slack, lambda data: data.co2_level, config["co2_level"])
             observers.append(co2_observer)
+            print("debug Enabled watching CO2 level")
 
     stamp = current_time()
 
