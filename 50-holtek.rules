@@ -1,0 +1,1 @@
+KERNEL=="hidraw[0-9]*", SUBSYSTEMS=="usb", ATTRS{idVendor}=="04d9", ATTRS{idProduct}=="a052", MODE="0666", SYMLINK+="co2sensor"
