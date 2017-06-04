@@ -17,3 +17,7 @@ co2_level:
   lower_threshold: 600
   upper_message: "Bitte Fenster oeffnen, der CO2 Level ist bei *{0}ppm*."
   lower_message: "Das Fenster kann geschlossen werden, der CO2 Level ist nur noch bei *{0}ppm*."
+
+plotting:
+  data_count: 600
+  plot_title: "Verlauf von Temperatur und CO2 Level"
