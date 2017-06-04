@@ -1,12 +1,19 @@
 ---
-prefix: office.floor4.kitchen
-user: foo@bar.com
-token: 'sometoken'
 
 slack:
-    webhook: 'https://hooks.slack.com/services/TXXXXXX/XXXXXX/xxxxxxx'
-    channel: '#general'
-    botname: 'CO2bot'
-    icon: ':monkey_face:'
-    upper_threshold: 800
-    lower_threshold: 600
+  webhook: "https://hooks.slack.com/services/TXXXXXX/XXXXXX/xxxxxxx"
+  channel: "#general"
+  botname: "CO2bot"
+  icon: ":monkey_face:"
+
+temperature:
+  upper_threshold: 24.5
+  lower_threshold: 22
+  upper_message: "Heiss hier drinnen, es sind *{0} Grad Celsius*. Klimaanlage anschalten!"
+  lower_message: "Es ist wieder kuehler, nur noch *{0} Grad Celsius*. Die Klimaanlage kann wieder ausgeschaltet werden."
+
+co2_level:
+  upper_threshold: 800
+  lower_threshold: 600
+  upper_message: "Bitte Fenster oeffnen, der CO2 Level ist bei *{0}ppm*."
+  lower_message: "Das Fenster kann geschlossen werden, der CO2 Level ist nur noch bei *{0}ppm*."
