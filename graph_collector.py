@@ -7,10 +7,11 @@ from matplotlib import pyplot
 
 class GraphCollector(object):
 
-    def __init__(self, image_reporter, data_extractors=[], data_count=20):
+    def __init__(self, image_reporter, data_extractors, config):
         self._image_reporter = image_reporter
         self._data_extractors = data_extractors
-        self._data_count = data_count
+        self._data_count = config["data_count"]
+        self._plot_title = config["plot_title"]
         self._data = []
 
     def notify(self, data):
@@ -41,5 +42,5 @@ class GraphCollector(object):
             print("debug send plot directly to reporter")
             pyplot.savefig(image_file, format="png")
             image_file.seek(0)
-            self._image_reporter.send_image_by_handle(image_file)
+            self._image_reporter.send_image_by_handle(image_file, self._plot_title)
         # pyplot.show()

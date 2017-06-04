@@ -48,13 +48,16 @@ def main(device_path, config_file_path):
     if slack:
         for data_extractor in AVAILABLE_QUANTITIES:
             if data_extractor.config_key in config:
-                observer = HystereseNotifierFromConfig(slack, data_extractor, config[data_extractor.config_key])
+                observer = HystereseNotifierFromConfig(slack,
+                                                       data_extractor,
+                                                       config[data_extractor.config_key])
                 observers.append(observer)
                 print("debug Enabled watching {0}".format(data_extractor.label))
 
     if "plotting" in config:
-        graph_notifier = GraphCollector(slack, AVAILABLE_QUANTITIES,
-                                        data_count=config["plotting"]["data_count"])
+        graph_notifier = GraphCollector(slack,
+                                        AVAILABLE_QUANTITIES,
+                                        config["plotting"])
         collectors.append(graph_notifier)
 
     stamp = current_time()
