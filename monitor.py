@@ -16,13 +16,18 @@ from collections import namedtuple
 from matplotlib import pyplot
 
 
-TIME_INTERVAL = 5
+OBSERVATION_TIME_INTERVAL = 5
+COLLECTION_TIME_INTERVAL = 0.05
 
 
 EnvironmentData = namedtuple("EnvironmentData", ["temperature", "co2_level"])
 Boundary = namedtuple("Boundary", ["threshold", "message"])
 DataExtractor = namedtuple("DataExtractor", ["label", "extract"])
 
+AVAILABLE_QUANTITIES = [DataExtractor(label="temperature",
+                                      extract=lambda data: data.temperature),
+                        DataExtractor(label="CO2 level",
+                                      extract=lambda data: data.co2_level)]
 
 def hex_format(d):
     return " ".join("%02X" % e for e in d)
@@ -192,21 +197,14 @@ def main(device_path, config_file_path):
     if "slack" in config:
         slack = SlackReporter(config["slack"])
         print("debug Enabled sending slack messages")
-        if "temperature" in config:
-            temperature_observer = HystereseNotifierFromConfig(slack, lambda data: data.temperature, config["temperature"])
-            observers.append(temperature_observer)
-            print("debug Enabled watching temperature")
-        if "co2_level" in config:
-            co2_observer = HystereseNotifierFromConfig(slack, lambda data: data.co2_level, config["co2_level"])
-            observers.append(co2_observer)
-            print("debug Enabled watching CO2 level")
+        for quantity in AVAILABLE_QUANTITIES:
+            if quantity.label in config:
+                observer = HystereseNotifierFromConfig(slack, quantity.extract, config[quantity.label])
+                observers.append(observer)
+                print("debug Enabled watching {0}".format(quantity.label))
 
     if "plotting" in config:
-        graph_notifier = GraphCollector(None,
-                                        [DataExtractor(label="temperature",
-                                                       extract=lambda data: data.temperature),
-                                         DataExtractor(label="CO2 level",
-                                                       extract=lambda data: data.co2_level)])
+        graph_notifier = GraphCollector(None, AVAILABLE_QUANTITIES)
         collectors.append(graph_notifier)
 
     stamp = current_time()
@@ -217,11 +215,11 @@ def main(device_path, config_file_path):
         data = monitor_device.read_device_data()
         print("debug current data: {0}".format(data))
 
-        if data and (current_time() - stamp > TIME_INTERVAL):
+        if data and (current_time() - stamp > OBSERVATION_TIME_INTERVAL):
             for o in observers:
                 o.notify(data)
                 stamp = current_time()
-        if data:
+        if data and (current_time() - stamp > COLLECTION_TIME_INTERVAL):
             for c in collectors:
                 c.notify(data)
 
