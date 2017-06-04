@@ -7,6 +7,7 @@ import sys
 import time
 import yaml
 from collections import namedtuple
+import tempfile
 from matplotlib import pyplot
 
 from holtek_data_readout import Co2Device
@@ -36,6 +37,7 @@ def current_time():
 class GraphCollector(object):
 
     def __init__(self, image_reporter, data_extractors=[], data_count=20):
+        self._image_reporter = image_reporter
         self._data_extractors = data_extractors
         self._data_count = data_count
         self._data = []
@@ -47,13 +49,29 @@ class GraphCollector(object):
 
     def plot_data(self):
         print("debug creating next plot")
-        x_data = range(len(self._data))
-        for extractor in self._data_extractors:
+        assert len(self._data_extractors) == 2
+
+        def plot_extractor(axis, extractor, color, style):
             y_data = list(map(extractor.extract, self._data))
-            pyplot.plot(x_data, y_data)
-            pyplot.title(extractor.label)
-            pyplot.show()
+            axis.plot(x_data, y_data, color + style)
+            axis.set_ylabel(extractor.label, color=color)
+            axis.tick_params("y", colors=color)
+
+        x_data = range(len(self._data))
+        figure, axis0 = pyplot.subplots()
+        plot_extractor(axis0, self._data_extractors[0], "r", "-")
+
+        axis1 = axis0.twinx()
+        plot_extractor(axis1, self._data_extractors[1], "b", "--")
+
+        figure.tight_layout()
         self._data = []
+        with tempfile.TemporaryFile(suffix="png") as image_file:
+            print("debug send plot directly to reporter")
+            pyplot.savefig(image_file, format="png")
+            image_file.seek(0)
+            self._image_reporter.send_image_by_handle(image_file)
+        # pyplot.show()
 
 
 def get_config(config_file_path):
@@ -78,7 +96,8 @@ def main(device_path, config_file_path):
                 print("debug Enabled watching {0}".format(data_extractor.label))
 
     if "plotting" in config:
-        graph_notifier = GraphCollector(None, AVAILABLE_QUANTITIES)
+        graph_notifier = GraphCollector(slack, AVAILABLE_QUANTITIES,
+                                        data_count=config["plotting"]["data_count"])
         collectors.append(graph_notifier)
 
     stamp = current_time()

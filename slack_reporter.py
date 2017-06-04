@@ -66,18 +66,23 @@ class SlackReporter(object):
         elif (message and self.webhook_p()):
             self.send_message_webhook(message)
 
+    def send_image_by_handle(self, image_file, title=""):
+        if (image_file and self.webapi_p()):
+            payload = {
+                "token": self._api_token,
+                "channels": self._channel,
+                "title": title,
+            }
+            files = {"file": image_file}
+            requests.post(url="https://slack.com/api/files.upload",
+                          data=payload,
+                          files=files)
+
     def send_image(self, image_path, title=""):
-        if (image_path and self.webapi_p()):
+        if image_path:
             with open(image_path, "rb") as image_file:
-                payload = {
-                    "token": self._api_token,
-                    "channels": self._channel,
-                    "title": title,
-                }
-                files = {"file": image_file}
-                requests.post(url="https://slack.com/api/files.upload",
-                              data=payload,
-                              files=files)
+                self.send_image_by_handle(image_file, title)
+
 
 def configure_slack(config):
     if "slack" in config:
