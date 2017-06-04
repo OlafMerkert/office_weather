@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-
-
 import os
 import sys
 import time
@@ -12,7 +10,7 @@ from collections import namedtuple
 from matplotlib import pyplot
 
 from holtek_data_readout import Co2Device
-from slack_reporter import SlackReporter
+from slack_reporter import configure_slack
 from notification_by_level import HystereseNotifierFromConfig, DataExtractor
 
 
@@ -57,6 +55,7 @@ class GraphCollector(object):
             pyplot.show()
         self._data = []
 
+
 def get_config(config_file_path):
     with open(config_file_path, 'r') as stream:
         return yaml.load(stream)
@@ -70,10 +69,8 @@ def main(device_path, config_file_path):
 
     observers = []
     collectors = []
-
-    if "slack" in config:
-        slack = SlackReporter(config["slack"])
-        print("debug Enabled sending slack messages")
+    slack = configure_slack(config)
+    if slack:
         for data_extractor in AVAILABLE_QUANTITIES:
             if data_extractor.config_key in config:
                 observer = HystereseNotifierFromConfig(slack, data_extractor, config[data_extractor.config_key])
