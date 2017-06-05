@@ -8,10 +8,10 @@ import time
 import yaml
 from collections import namedtuple
 
-from holtek_data_readout import Co2Device
-from slack_reporter import configure_slack
-from notification_by_level import HystereseNotifierFromConfig, DataExtractor
-from graph_collector import GraphCollector
+from Co2Device import Co2Device
+from SlackReporter import configure_slack
+from HystereseNotifier import HystereseNotifierFromConfig, DataExtractor
+from GraphCollector import GraphCollector
 
 
 OBSERVATION_TIME_INTERVAL = 5
