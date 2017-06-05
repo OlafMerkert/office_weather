@@ -7,10 +7,6 @@ import requests
 class SlackReporter(object):
 
     def __init__(self, config):
-        self._config = config
-        self.load_config(config)
-
-    def load_config(self, config):
         if "api_token" in config:
             self._api_token = config["api_token"]
             self._channel = config["channel"]
