@@ -18,7 +18,7 @@ class SlackReporter(object):
             self._botName = config["botname"]
             self._icon = config["icon"]
         else:
-            raise "Did not find slack configuration object"
+            raise "Missing 'webhook' or 'api_token' key in configuration object:\n {0}".format(config)
 
     def webhook_p(self):
         return (hasattr(self, "_webhook_url") and
