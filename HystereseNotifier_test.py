@@ -9,6 +9,11 @@ dummy_extractor = DataExtractor(config_key="some_value",
                                 label="Some Value",
                                 extract=lambda x: x.value)
 
+dummy_extractor2 = DataExtractor(config_key="some_other_value",
+                                 label="Some Other Value",
+                                 extract=lambda x: x.other_value)
+
+
 def dummy_data(value):
     return Dummy(value=value, other_value=0)
 
