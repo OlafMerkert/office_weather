@@ -5,7 +5,7 @@ FAILED_MESSAGE="zenity  --notification --window-icon='dialog-warning-symbolic' -
 run :
 	python2 monitor.py /dev/co2sensor
 
-test :
+watch_test :
 	ptw --config "pytest.ini" --onfail $(FAILED_MESSAGE) -- -v .
 
 

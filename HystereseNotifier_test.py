@@ -33,7 +33,7 @@ class FakeReporter:
     def send_message(self, message):
         self.fake_messages.append(message)
 
-class TestHystereseNotifier:
+class describe_HystereseNotifier:
 
     def setup_notifier(self):
         reporter = FakeReporter()
@@ -41,7 +41,7 @@ class TestHystereseNotifier:
         notifier = HystereseNotifierFromConfig(reporter, dummy_extractor, config)
         return reporter, notifier
 
-    def test_no_report_when_within_range(self):
+    def it_reports_nothing_when_values_are_within_range(self):
         reporter, notifier = self.setup_notifier()
 
         for value in [20, 21, 22, 30, 40]:
@@ -49,7 +49,7 @@ class TestHystereseNotifier:
 
         assert reporter.fake_messages == []
 
-    def test_no_report_when_lower(self):
+    def it_reports_nothing_when_values_are_lower(self):
         reporter, notifier = self.setup_notifier()
 
         for value in [20, 19, 10, 30]:
@@ -57,7 +57,7 @@ class TestHystereseNotifier:
 
         assert reporter.fake_messages == []
 
-    def test_report_only_once_when_higher(self):
+    def it_reports_only_once_when_values_are_higher(self):
         reporter, notifier = self.setup_notifier()
 
         for value in [40, 42, 50, 40]:
@@ -65,7 +65,7 @@ class TestHystereseNotifier:
 
         assert reporter.fake_messages == ["upper:42"]
 
-    def test_report_once_when_higher_and_lower_again(self):
+    def it_reports_once_when_values_were_higher_and_then_lower_again(self):
         reporter, notifier = self.setup_notifier()
 
         for value in [40, 42, 30, 20, 19]:
@@ -73,7 +73,7 @@ class TestHystereseNotifier:
 
         assert reporter.fake_messages == ["upper:42", "lower:20"]
 
-    def test_report_when_higher_and_lower(self):
+    def it_reports_when_values_go_higher_and_lower_repeatedly(self):
         reporter, notifier = self.setup_notifier()
 
         for value in [30, 42, 50, 40, 20, 19, 31, 44, 34, 18]:
@@ -84,7 +84,7 @@ class TestHystereseNotifier:
                                           "upper:44",
                                           "lower:18"]
 
-    def test_no_report_when_other_value_changes(self):
+    def it_reports_nothing_when_only_another_value_changes(self):
         reporter, notifier = self.setup_notifier()
 
         for other_value in [30, 42, 50, 40, 20, 19, 31, 44, 34, 18]:
