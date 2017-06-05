@@ -2,3 +2,4 @@ config.yaml
 2015-05-05-raspbian-wheezy.img
 config.yaml
 *.pyc
+/test/report/results.xml
