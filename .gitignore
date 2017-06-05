@@ -3,3 +3,4 @@ config.yaml
 config.yaml
 *.pyc
 /test/report/results.xml
+.cache

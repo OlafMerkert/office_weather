@@ -36,4 +36,3 @@ def HystereseNotifierFromConfig(reporter, data_extractor, config):
                                                      message=config["lower_message"]),
                              upper_boundary=Boundary(threshold=config["upper_threshold"],
                                                      message=config["upper_message"]))
-
