@@ -4,6 +4,8 @@ from __future__ import print_function
 import tempfile
 from matplotlib import pyplot
 
+IMAGE_FILE_FORMAT = "png"
+
 
 class GraphCollector(object):
 
@@ -26,7 +28,9 @@ class GraphCollector(object):
         def plot_extractor(axis, extractor, color, style):
             y_data = list(map(extractor.extract, self._data))
             axis.plot(x_data, y_data, color + style)
-            axis.set_ylabel(extractor.label, color=color)
+            axis.set_ylabel("{0} [{1}]".format(extractor.label, extractor.unit),
+                            color=color)
+            axis.set_ylim([extractor.min_value, extractor.max_value])
             axis.tick_params("y", colors=color)
 
         x_data = range(len(self._data))
@@ -38,9 +42,9 @@ class GraphCollector(object):
 
         figure.tight_layout()
         self._data = []
-        with tempfile.TemporaryFile(suffix="png") as image_file:
+        with tempfile.TemporaryFile(suffix=IMAGE_FILE_FORMAT) as image_file:
             print("debug send plot directly to reporter")
-            pyplot.savefig(image_file, format="png")
+            pyplot.savefig(image_file, format=IMAGE_FILE_FORMAT)
             image_file.seek(0)
             self._image_reporter.send_image_by_handle(image_file, self._plot_title)
         # pyplot.show()

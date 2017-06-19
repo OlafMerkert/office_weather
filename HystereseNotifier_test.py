@@ -7,10 +7,16 @@ Dummy = namedtuple("Dummy", ["value", "other_value"])
 
 dummy_extractor = DataExtractor(config_key="some_value",
                                 label="Some Value",
+                                unit="GB",
+                                min_value=-10,
+                                max_value=20,
                                 extract=lambda x: x.value)
 
 dummy_extractor2 = DataExtractor(config_key="some_other_value",
                                  label="Some Other Value",
+                                 unit="EUR",
+                                 min_value=-1,
+                                 max_value=10,
                                  extract=lambda x: x.other_value)
 
 

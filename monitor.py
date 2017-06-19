@@ -22,10 +22,16 @@ AVAILABLE_QUANTITIES = [
     DataExtractor(
         config_key="temperature",
         label="Temperature",
+        unit="° C",
+        min_value=0,
+        max_value=40,
         extract=lambda data: data.temperature),
     DataExtractor(
         config_key="co2_level",
         label="CO2 level",
+        unit="ppm",
+        min_value=400,
+        max_value=1000,
         extract=lambda data: data.co2_level)]
 
 

@@ -4,7 +4,13 @@ from __future__ import print_function
 from collections import namedtuple
 
 
-DataExtractor = namedtuple("DataExtractor", ["config_key", "label", "extract"])
+DataExtractor = namedtuple("DataExtractor",
+                           ["config_key",
+                            "label",
+                            "unit",
+                            "min_value",
+                            "max_value",
+                            "extract"])
 
 Boundary = namedtuple("Boundary", ["threshold", "message"])
 
