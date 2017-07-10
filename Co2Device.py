@@ -21,8 +21,6 @@ def hex_format(list_of_integers):
 def compose_lists(data_list, index_list):
     return [data_list[i] for i in index_list]
 
-def xor(x, y):
-    return x ^ y
 
 def rotate(data_list, offset):
     data_deque = deque(data_list)
@@ -41,22 +39,25 @@ class Co2Device(object):
         cipher_state = [0x48, 0x74, 0x65, 0x6D, 0x70, 0x39, 0x39, 0x65]
         shuffle = [2, 4, 0, 7, 1, 6, 5, 3]
 
+        def xor(x, y):
+            return x ^ y
+
         def phase3_transformation(x, y):
             return ((x >> 3) | (y << 5)) & 0xff
 
+        def cipher_transformation(x):
+            return ((x >> 4) | (x << 4)) & 0xff
+
+        def phase4_transformation(x, y):
+            return (0x100 + x - y) & 0xff
+
         phase1 = compose_lists(read_data, shuffle)
-        phase2 = list(map(xor, phase1, self._device_key))
-        phase3 = list(map(phase3_transformation, phase2, rotate(phase2, 1)))
+        phase2 = map(xor, phase1, self._device_key)
+        phase3 = map(phase3_transformation, phase2, rotate(phase2, 1))
+        cipher_state_transformed = map(cipher_transformation, cipher_state)
+        phase4 = map(phase4_transformation, phase3, cipher_state_transformed)
 
-        ctmp = [0] * 8
-        for i in range(8):
-            ctmp[i] = ((cipher_state[i] >> 4) | (cipher_state[i] << 4)) & 0xff
-
-        out = [0] * 8
-        for i in range(8):
-            out[i] = (0x100 + phase3[i] - ctmp[i]) & 0xff
-
-        return out
+        return list(phase4)
 
     def open_monitor_device(self):
         self._co2_monitor_device_handle = open(self._device_path, "a+b", 0)
