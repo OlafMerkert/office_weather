@@ -6,7 +6,6 @@ import os
 import sys
 import time
 import yaml
-from collections import namedtuple
 
 from Co2Device import Co2Device
 from SlackReporter import configure_slack
