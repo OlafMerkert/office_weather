@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import sys
 from collections import namedtuple, deque
+from itertools import tee
 
 import fcntl
 
@@ -55,11 +56,13 @@ class Co2Device(object):
 
         # note that iterators cannot be consumed twice, therefore convert everything to lists for now.
         phase1 = compose_lists(read_data, shuffle)
-        phase2 = list(map(xor, phase1, self._device_key))
-        phase3 = list(map(phase3_transformation, phase2, rotate(phase2, 1)))
-        cipher_state_transformed = list(map(cipher_transformation, cipher_state))
-        phase4 = list(map(phase4_transformation, phase3, cipher_state_transformed))
+        phase2 = map(xor, phase1, self._device_key)
+        phase2a, phase2b = tee(phase2)
+        phase3 = map(phase3_transformation, phase2a, rotate(phase2b, 1))
+        cipher_state_transformed = map(cipher_transformation, cipher_state)
+        phase4 = map(phase4_transformation, phase3, cipher_state_transformed)
 
+        phase4 = list(phase4)
         assert len(phase4) == 8
 
         return phase4
