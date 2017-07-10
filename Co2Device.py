@@ -31,9 +31,11 @@ def rotate(data_list, offset):
 
 class Co2Device(object):
 
-    def __init__(self, device_path):
+    def __init__(self, device_path, logger=None):
         self._device_path = device_path
+        self._logger = logger
         self._current_data = EnvironmentData(temperature=None, co2_level=None)
+        self._unknown_op_codes = set()
         self._device_key = [0xc4, 0xc6, 0xc0, 0x92, 0x40, 0x23, 0xdc, 0x96]
 
     def decrypt(self, read_data):
@@ -54,7 +56,6 @@ class Co2Device(object):
         def phase4_transformation(x, y):
             return (0x100 + x - y) & 0xff
 
-        # note that iterators cannot be consumed twice, therefore convert everything to lists for now.
         phase1 = compose_lists(read_data, shuffle)
         phase2 = map(xor, phase1, self._device_key)
         phase2a, phase2b = tee(phase2)
@@ -83,12 +84,14 @@ class Co2Device(object):
             0x42: self.handle_temperature,
             0x50: self.handle_co2,
         }
+        if self._logger:
+            self._logger(op_code, value)
 
         if op_code in known_operations:
             known_operations[op_code](value)
             return self._current_data
         else:
-            print("debug unknown op_code code 0x{0:x} with value {0:x}".format(op_code, value))
+            self._unknown_op_codes.add(op_code)
 
     def handle_temperature(self, temperature_raw):
         temperature_celsius = temperature_raw / 16.0 - 273.15

@@ -11,6 +11,8 @@ watch_test :
 run-device :
 	python3 Co2Device.py /dev/co2sensor
 
+collect-log :
+	python3 datalog.py /dev/co2sensor
 
 setup-udev :
 	sudo cp $(UDEV_FILE) /etc/udev/rules.d/$(UDEV_FILE)
