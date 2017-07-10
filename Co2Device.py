@@ -18,6 +18,9 @@ EnvironmentData = namedtuple("EnvironmentData", ["temperature", "co2_level"])
 def hex_format(list_of_integers):
     return " ".join(map(lambda some_int: "0x{0:x}".format(some_int), list_of_integers))
 
+def compose_lists(data_list, index_list):
+    return [data_list[i] for i in index_list]
+
 
 class Co2Device(object):
 
@@ -26,13 +29,11 @@ class Co2Device(object):
         self._values = {}
         self._device_key = [0xc4, 0xc6, 0xc0, 0x92, 0x40, 0x23, 0xdc, 0x96]
 
-    def decrypt(self, read_bytes_as_int_list):
+    def decrypt(self, read_data):
         cipher_state = [0x48, 0x74, 0x65, 0x6D, 0x70, 0x39, 0x39, 0x65]
         shuffle = [2, 4, 0, 7, 1, 6, 5, 3]
 
-        phase1 = [0] * 8
-        for i, o in enumerate(shuffle):
-            phase1[o] = read_bytes_as_int_list[i]
+        phase1 = compose_lists(read_data, shuffle)
 
         phase2 = [0] * 8
         for i in range(8):
