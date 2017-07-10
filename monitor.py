@@ -11,6 +11,7 @@ from Co2Device import Co2Device
 from SlackReporter import configure_slack
 from HystereseNotifier import HystereseNotifierFromConfig, DataExtractor
 from GraphCollector import GraphCollector
+from datalog import run_with_logger
 
 
 OBSERVATION_TIME_INTERVAL = 5
@@ -41,10 +42,10 @@ def get_config(config_file_path):
     with open(config_file_path, 'r') as stream:
         return yaml.load(stream)
 
-def main(device_path, config_file_path):
+def main(device_path, config_file_path, logger=None):
     config = get_config(config_file_path)
 
-    monitor_device = Co2Device(device_path)
+    monitor_device = Co2Device(device_path, logger)
     monitor_device.open_monitor_device()
 
     observers = []
@@ -88,4 +89,4 @@ if __name__ == "__main__":
 
     device_path = sys.argv[1]
 
-    main(device_path, config_file_path)
+    run_with_logger(lambda logger: main(device_path, config_file_path, logger))

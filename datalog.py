@@ -1,20 +1,17 @@
 from __future__ import print_function
 
-import sys
 from datetime import datetime
-from Co2Device import Co2Device
+from Co2Device import device_bare_loop
 
-with open("/tmp/co2datalog.csv", "a") as logfile:
-    def logger(op_code, value):
-        logfile.write("{0}, {1}, {2},\n".format(
-            datetime.now().time(),
-            op_code,
-            value,
-        ))
 
-    device = Co2Device(sys.argv[1], logger)
-    device.open_monitor_device()
+def run_with_logger(logfile, body):
+    with open(logfile, "a") as logfile:
+        def logger(op_code, value):
+            logfile.write("{0}, {1}, {2},\n".format(
+                datetime.now().time(),
+                op_code,
+                value,
+            ))
 
-    while True:
-        data = device.read_device_data()
-        print("debug current data: {0}".format(data))
+if __name__ == "__main__":
+    run_with_logger("/tmp/co2datalog.csv", device_bare_loop)

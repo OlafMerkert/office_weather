@@ -118,10 +118,14 @@ class Co2Device(object):
 
         return None
 
-if __name__ == "__main__":
-    device = Co2Device(sys.argv[1])
+
+def device_bare_loop(logger=None):
+    device = Co2Device(sys.argv[1], logger)
     device.open_monitor_device()
 
     while True:
         data = device.read_device_data()
         print("debug current data: {0}".format(data))
+
+if __name__ == "__main__":
+    device_bare_loop()
