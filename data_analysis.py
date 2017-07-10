@@ -60,10 +60,13 @@ def split_log_table(keys, log_table):
 
     return positive_table, negative_table
 
-wiggling_table, other_table = split_log_table([0x71, 0x50], log_table)
+co2_table, other_table = split_log_table([0x71, 0x50], log_table)
+
+wiggling_table, other_table = split_log_table([0x6e, 0x4f], other_table)
 
 # plot_log_table(log_table)
 
+# plot_log_table(co2_table)
 plot_log_table(wiggling_table)
 plot_log_table(other_table)
 
