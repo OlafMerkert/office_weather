@@ -32,10 +32,12 @@ class Co2Device(object):
 
     def __init__(self, device_path):
         self._device_path = device_path
-        self._values = {}
+        self._current_data = EnvironmentData(temperature=None, co2_level=None)
         self._device_key = [0xc4, 0xc6, 0xc0, 0x92, 0x40, 0x23, 0xdc, 0x96]
 
     def decrypt(self, read_data):
+        assert len(read_data) == 8
+
         cipher_state = [0x48, 0x74, 0x65, 0x6D, 0x70, 0x39, 0x39, 0x65]
         shuffle = [2, 4, 0, 7, 1, 6, 5, 3]
 
@@ -51,40 +53,61 @@ class Co2Device(object):
         def phase4_transformation(x, y):
             return (0x100 + x - y) & 0xff
 
+        # note that iterators cannot be consumed twice, therefore convert everything to lists for now.
         phase1 = compose_lists(read_data, shuffle)
-        phase2 = map(xor, phase1, self._device_key)
-        phase3 = map(phase3_transformation, phase2, rotate(phase2, 1))
-        cipher_state_transformed = map(cipher_transformation, cipher_state)
-        phase4 = map(phase4_transformation, phase3, cipher_state_transformed)
+        phase2 = list(map(xor, phase1, self._device_key))
+        phase3 = list(map(phase3_transformation, phase2, rotate(phase2, 1)))
+        cipher_state_transformed = list(map(cipher_transformation, cipher_state))
+        phase4 = list(map(phase4_transformation, phase3, cipher_state_transformed))
 
-        return list(phase4)
+        assert len(phase4) == 8
+
+        return phase4
 
     def open_monitor_device(self):
-        self._co2_monitor_device_handle = open(self._device_path, "a+b", 0)
-        HIDIOCSFEATURE_9 = 0xC0094806
+        hid_iocs_feature_9 = 0xC0094806
         set_report = bytes([0x00] + self._device_key)
-        print("debug set_report {0}".format(set_report))
-        fcntl.ioctl(self._co2_monitor_device_handle, HIDIOCSFEATURE_9, set_report)
+
+        self._co2_monitor_device_handle = open(self._device_path, "a+b", 0)
+        fcntl.ioctl(self._co2_monitor_device_handle, hid_iocs_feature_9, set_report)
+
+    def verify_checksum(self, decrypted_data):
+        return (decrypted_data[4] == 0x0d and
+                (sum(decrypted_data[:3]) & 0xff) == decrypted_data[3])
+
+    def handle_op(self, op_code, value):
+        known_operations = {
+            0x42: self.handle_temperature,
+            0x50: self.handle_co2,
+        }
+
+        if op_code in known_operations:
+            known_operations[op_code](value)
+            return self._current_data
+        else:
+            print("debug unknown op_code code 0x{0:x} with value {0:x}".format(op_code, value))
+
+    def handle_temperature(self, temperature_raw):
+        temperature_celsius = temperature_raw / 16.0 - 273.15
+        self._current_data = self._current_data._replace(temperature=temperature_celsius)
+
+    def handle_co2(self, co2_level):
+        if 0 <= co2_level <= 5000:
+            self._current_data = self._current_data._replace(co2_level=co2_level)
+        else:
+            print("debug co2_level out of range: {0}".format(co2_level))
 
     def read_device_data(self):
-        read_bytes = self._co2_monitor_device_handle.read(8)
-        read_bytes_as_int_list = list(read_bytes)
-        
-        decrypted = self.decrypt(read_bytes_as_int_list)
-        print("Debug:", hex_format(read_bytes_as_int_list), " => ", hex_format(decrypted))
+        read_bytes = list(self._co2_monitor_device_handle.read(8))  # list() converts to integers
+        decrypted_data = self.decrypt(read_bytes)
 
-        if decrypted[4] != 0x0d or (sum(decrypted[:3]) & 0xff) != decrypted[3]:
-            print(hex_format(read_bytes_as_int_list), " => ", hex_format(decrypted), "Checksum error")
+        if not self.verify_checksum(decrypted_data):
+            print(hex_format(read_bytes), " => ", hex_format(decrypted_data), "Checksum error")
         else:
-            op = decrypted[0]
-            val = decrypted[1] << 8 | decrypted[2]
-            self._values[op] = val
+            op_code = decrypted_data[0]
+            value = decrypted_data[1] << 8 | decrypted_data[2]
 
-            if (0x50 in self._values) and (0x42 in self._values):
-                co2_level = self._values[0x50]
-                temperature = (self._values[0x42] / 16.0 - 273.15)
-                if not (co2_level > 5000 or co2_level < 0):
-                    return EnvironmentData(co2_level=co2_level, temperature=temperature)
+            return self.handle_op(op_code, value)
 
         return None
 
