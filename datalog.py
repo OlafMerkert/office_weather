@@ -13,5 +13,9 @@ def run_with_logger(logfile, body):
                 value,
             ))
 
+        print("debug start logging data to {0}".format(logfile))
+
+        body(logger)
+
 if __name__ == "__main__":
     run_with_logger("/tmp/co2datalog.csv", device_bare_loop)

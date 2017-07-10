@@ -92,4 +92,5 @@ if __name__ == "__main__":
 
     device_path = sys.argv[1]
 
-    run_with_logger(lambda logger: main(device_path, config_file_path, logger))
+    run_with_logger("/tmp/co2datalog.csv",
+                    lambda logger: main(device_path, config_file_path, logger))
