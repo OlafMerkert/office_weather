@@ -14,6 +14,9 @@ run-device :
 collect-log :
 	python3 datalog.py /dev/co2sensor
 
+analyse-log :
+	python3 data_analysis.py
+
 setup-udev :
 	sudo cp $(UDEV_FILE) /etc/udev/rules.d/$(UDEV_FILE)
 
