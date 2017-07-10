@@ -24,7 +24,7 @@ class Co2Device(object):
         self._device_key = [0xc4, 0xc6, 0xc0, 0x92, 0x40, 0x23, 0xdc, 0x96]
 
     def decrypt(self, data):
-        cstate = [0x48, 0x74, 0x65, 0x6D, 0x70, 0x39, 0x39, 0x65]
+        cipher_state = [0x48, 0x74, 0x65, 0x6D, 0x70, 0x39, 0x39, 0x65]
         shuffle = [2, 4, 0, 7, 1, 6, 5, 3]
 
         phase1 = [0] * 8
@@ -41,7 +41,7 @@ class Co2Device(object):
 
         ctmp = [0] * 8
         for i in range(8):
-            ctmp[i] = ((cstate[i] >> 4) | (cstate[i] << 4)) & 0xff
+            ctmp[i] = ((cipher_state[i] >> 4) | (cipher_state[i] << 4)) & 0xff
 
         out = [0] * 8
         for i in range(8):
