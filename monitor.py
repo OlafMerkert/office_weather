@@ -6,6 +6,7 @@ import os
 import sys
 import time
 import yaml
+from datetime import datetime, timedelta
 
 from Co2Device import Co2Device
 from SlackReporter import configure_slack
@@ -14,8 +15,8 @@ from GraphCollector import GraphCollector
 from datalog import run_with_logger
 
 
-OBSERVATION_TIME_INTERVAL = 5
-COLLECTION_TIME_INTERVAL = 2
+OBSERVATION_TIME_INTERVAL = timedelta(seconds=5)
+COLLECTION_TIME_INTERVAL = timedelta(seconds=2)
 
 
 AVAILABLE_QUANTITIES = [
@@ -66,7 +67,8 @@ def main(device_path, config_file_path, logger=None):
                                         config["plotting"])
         collectors.append(graph_notifier)
 
-    stamp = current_time()
+    observation_last_timestamp = datetime.now()
+    collection_last_timestamp = datetime.now()
 
     print("debug observers: {0}, collectors: {1}".format(observers, collectors))
 
@@ -74,13 +76,14 @@ def main(device_path, config_file_path, logger=None):
         data = monitor_device.read_device_data()
         print("debug current data: {0}".format(data))
 
-        if data and (current_time() - stamp > OBSERVATION_TIME_INTERVAL):
+        if data and (data.timestamp - observation_last_timestamp >= OBSERVATION_TIME_INTERVAL):
             for o in observers:
                 o.notify(data)
-                stamp = current_time()
-        if data and (current_time() - stamp > COLLECTION_TIME_INTERVAL):
+                observation_last_timestamp = data.timestamp
+        if data and (data.timestamp - collection_last_timestamp >= COLLECTION_TIME_INTERVAL):
             for c in collectors:
                 c.notify(data)
+                collection_last_timestamp = data.timestamp
 
 
 if __name__ == "__main__":
