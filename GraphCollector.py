@@ -33,7 +33,7 @@ class GraphCollector(object):
             axis.set_ylim([extractor.min_value, extractor.max_value])
             axis.tick_params("y", colors=color)
 
-        x_data = range(len(self._data))
+        x_data = list(map(lambda x: x.timestamp, self._data))
         figure, axis0 = pyplot.subplots()
         plot_extractor(axis0, self._data_extractors[0], "r", "-")
 

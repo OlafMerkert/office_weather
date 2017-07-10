@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import sys
 from collections import namedtuple, deque
+from datetime import datetime
 from itertools import tee
 
 import fcntl
@@ -13,7 +14,7 @@ import fcntl
 # https://hackaday.io/project/5301-reverse-engineering-a-low-cost-usb-co-monitor/log/17909-all-your-base-are-belong-to-us
 
 
-EnvironmentData = namedtuple("EnvironmentData", ["temperature", "co2_level"])
+EnvironmentData = namedtuple("EnvironmentData", ["timestamp", "temperature", "co2_level"])
 
 
 def hex_format(list_of_integers):
@@ -28,13 +29,16 @@ def rotate(data_list, offset):
     data_deque.rotate(offset)
     return data_deque
 
+def now():
+    return datetime.now()
+
 
 class Co2Device(object):
 
     def __init__(self, device_path, logger=None):
         self._device_path = device_path
         self._logger = logger
-        self._current_data = EnvironmentData(temperature=None, co2_level=None)
+        self._current_data = EnvironmentData(timestamp=now(), temperature=None, co2_level=None)
         self._unknown_op_codes = set()
         self._device_key = [0xc4, 0xc6, 0xc0, 0x92, 0x40, 0x23, 0xdc, 0x96]
 
@@ -96,11 +100,13 @@ class Co2Device(object):
 
     def handle_temperature(self, temperature_raw):
         temperature_celsius = temperature_raw / 16.0 - 273.15
-        self._current_data = self._current_data._replace(temperature=temperature_celsius)
+        self._current_data = self._current_data._replace(timestamp=now(),
+                                                         temperature=temperature_celsius)
 
     def handle_co2(self, co2_level):
         if 0 <= co2_level <= 5000:
-            self._current_data = self._current_data._replace(co2_level=co2_level)
+            self._current_data = self._current_data._replace(timestamp=now(),
+                                                             co2_level=co2_level)
         else:
             print("debug co2_level out of range: {0}".format(co2_level))
 

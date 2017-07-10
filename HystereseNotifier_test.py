@@ -2,8 +2,9 @@
 
 from HystereseNotifier import DataExtractor, HystereseNotifierFromConfig
 from collections import namedtuple
+from datetime import datetime, timedelta
 
-Dummy = namedtuple("Dummy", ["value", "other_value"])
+Dummy = namedtuple("Dummy", ["timestamp", "value", "other_value"])
 
 dummy_extractor = DataExtractor(config_key="some_value",
                                 label="Some Value",
@@ -19,9 +20,16 @@ dummy_extractor2 = DataExtractor(config_key="some_other_value",
                                  max_value=10,
                                  extract=lambda x: x.other_value)
 
+timestamp_start = datetime(year=2017, month=10, day=12, hour=8, minute=10, second=30)
+timestamp_offset = timedelta(seconds=5)
+
+def mock_timestamp():
+    global timestamp_start
+    timestamp_start += timestamp_offset
+    return timestamp_start
 
 def dummy_data(value):
-    return Dummy(value=value, other_value=0)
+    return Dummy(timestamp=mock_timestamp(), value=value, other_value=0)
 
 def fake_config():
     return {
@@ -94,6 +102,6 @@ class describe_HystereseNotifier:
         reporter, notifier = self.setup_notifier()
 
         for other_value in [30, 42, 50, 40, 20, 19, 31, 44, 34, 18]:
-            notifier.notify(Dummy(value=30, other_value=other_value))
+            notifier.notify(Dummy(timestamp=mock_timestamp(), value=30, other_value=other_value))
 
         assert reporter.fake_messages == []
