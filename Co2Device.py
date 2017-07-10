@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 import sys
-from collections import namedtuple
+from collections import namedtuple, deque
 
 import fcntl
 
@@ -24,6 +24,11 @@ def compose_lists(data_list, index_list):
 def xor(x, y):
     return x ^ y
 
+def rotate(data_list, offset):
+    data_deque = deque(data_list)
+    data_deque.rotate(offset)
+    return data_deque
+
 
 class Co2Device(object):
 
@@ -36,12 +41,12 @@ class Co2Device(object):
         cipher_state = [0x48, 0x74, 0x65, 0x6D, 0x70, 0x39, 0x39, 0x65]
         shuffle = [2, 4, 0, 7, 1, 6, 5, 3]
 
+        def phase3_transformation(x, y):
+            return ((x >> 3) | (y << 5)) & 0xff
+
         phase1 = compose_lists(read_data, shuffle)
         phase2 = list(map(xor, phase1, self._device_key))
-
-        phase3 = [0] * 8
-        for i in range(8):
-            phase3[i] = ((phase2[i] >> 3) | (phase2[(i - 1 + 8) % 8] << 5)) & 0xff
+        phase3 = list(map(phase3_transformation, phase2, rotate(phase2, 1)))
 
         ctmp = [0] * 8
         for i in range(8):
