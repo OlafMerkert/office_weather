@@ -21,6 +21,9 @@ def hex_format(list_of_integers):
 def compose_lists(data_list, index_list):
     return [data_list[i] for i in index_list]
 
+def xor(x, y):
+    return x ^ y
+
 
 class Co2Device(object):
 
@@ -34,10 +37,7 @@ class Co2Device(object):
         shuffle = [2, 4, 0, 7, 1, 6, 5, 3]
 
         phase1 = compose_lists(read_data, shuffle)
-
-        phase2 = [0] * 8
-        for i in range(8):
-            phase2[i] = phase1[i] ^ self._device_key[i]
+        phase2 = list(map(xor, phase1, self._device_key))
 
         phase3 = [0] * 8
         for i in range(8):
