@@ -83,6 +83,7 @@ class Co2Device(object):
         known_operations = {
             0x42: self.handle_temperature,
             0x50: self.handle_co2,
+            # 0x71: self.handle_co2,
         }
         if self._logger:
             self._logger(op_code, value)
