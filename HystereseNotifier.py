@@ -23,12 +23,19 @@ class HystereseNotifier(object):
         self._lower_boundary = lower_boundary
         self._upper_boundary = upper_boundary
         self._data_extractor = data_extractor
+        self._above_is_below = upper_boundary < lower_boundary
+
+    def is_above(self, value, threshold):
+        if self._above_is_below:
+            return value < threshold
+        else:
+            return value > threshold
 
     def notify_value(self, value):
-        if not self._above_upper and value > self._upper_boundary.threshold:
+        if not self._above_upper and self.is_above(value, self._upper_boundary.threshold):
             self._above_upper = True
             self._reporter.send_message(self._upper_boundary.message.format(value))
-        elif self._above_upper and value <= self._lower_boundary.threshold:
+        elif self._above_upper and not self.is_above(value, self._lower_boundary.threshold):
             self._above_upper = False
             self._reporter.send_message(self._lower_boundary.message.format(value))
 

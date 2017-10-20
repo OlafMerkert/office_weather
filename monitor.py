@@ -33,7 +33,15 @@ AVAILABLE_QUANTITIES = [
         unit="ppm",
         min_value=400,
         max_value=1000,
-        extract=lambda data: data.co2_level)]
+        extract=lambda data: data.co2_level),
+    DataExtractor(
+        config_key="temperature_below",
+        label="Temperature",
+        unit="deg C",
+        min_value=10,
+        max_value=35,
+        extract=lambda data: data.temperature),
+]
 
 
 def current_time():
@@ -63,7 +71,7 @@ def main(device_path, config_file_path, logger=None):
 
     if "plotting" in config:
         graph_notifier = GraphCollector(slack,
-                                        AVAILABLE_QUANTITIES,
+                                        AVAILABLE_QUANTITIES[:2],
                                         config["plotting"])
         collectors.append(graph_notifier)
 
